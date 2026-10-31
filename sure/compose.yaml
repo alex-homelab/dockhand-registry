@@ -1,0 +1,75 @@
+services:
+  web:
+    image: ghcr.io/we-promise/sure:0.7.4-alpha.7
+    restart: unless-stopped
+    ports:
+      - "100.71.86.199:3001:3000"
+    volumes:
+      - app-storage:/rails/storage
+    environment: &sure-env
+      SELF_HOSTED: "true"
+      ONBOARDING_STATE: "open"
+      AI_DEBUG_MODE: "false"
+      AUTH_PROVIDERS_SOURCE: db
+      RAILS_ASSUME_SSL: "true"
+      WEBAUTHN_RP_ID: sure.vcov.org
+      WEBAUTHN_ALLOWED_ORIGINS: https://sure.vcov.org
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?required from Infisical /sure}
+      ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY:?required from Infisical /sure}
+      ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY:?required from Infisical /sure}
+      ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:?required from Infisical /sure}
+      POSTGRES_USER: ${PG_USER:?required from Infisical /sure}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?required from Infisical /sure}
+      POSTGRES_DB: sure
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: ghcr.io/we-promise/sure:0.7.4-alpha.7
+    command: bundle exec sidekiq
+    restart: unless-stopped
+    volumes:
+      - app-storage:/rails/storage
+    environment: *sure-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${PG_USER:?required from Infisical /sure}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?required from Infisical /sure}
+      POSTGRES_DB: sure
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  app-storage:
+  postgres-data:
+  redis-data:
