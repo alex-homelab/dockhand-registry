@@ -32,8 +32,6 @@ services:
 
   worker:
     image: ghcr.io/we-promise/sure:0.7.4-alpha.7
-    profiles:
-      - worker
     command: bundle exec sidekiq
     restart: unless-stopped
     volumes:
