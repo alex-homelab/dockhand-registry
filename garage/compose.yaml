@@ -13,6 +13,21 @@ services:
     networks:
       - shared-services
 
+  webui:
+    image: khairul169/garage-webui:1.1.0
+    restart: unless-stopped
+    depends_on:
+      - garage
+    environment:
+      API_BASE_URL: http://garage:3903
+      API_ADMIN_KEY: ${GARAGE_ADMIN_TOKEN:?required from Infisical /garage}
+      S3_ENDPOINT_URL: http://garage:3900
+      S3_REGION: home
+    ports:
+      - "100.71.86.199:3909:3909"
+    networks:
+      - shared-services
+
 volumes:
   garage-data:
     name: garage-data

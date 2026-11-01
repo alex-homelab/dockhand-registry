@@ -4,7 +4,7 @@ Docker Compose stacks deployed by Dockhand from this repository. Git is the desi
 
 ## Stacks
 
-- [`garage/compose.yaml`](garage/compose.yaml): single-node Garage S3 service. Infisical path: `/garage`. S3 endpoint on the shared Docker network: `http://garage:3900`; published only on NetBird at `100.71.86.199:3900` for the NetBird reverse proxy.
+- [`garage/compose.yaml`](garage/compose.yaml): single-node Garage S3 service and Garage Web UI 1.1.0. Infisical path: `/garage` (the UI reuses `GARAGE_ADMIN_TOKEN`). S3 endpoint on the shared Docker network: `http://garage:3900`; published only on NetBird at `100.71.86.199:3900`. The web UI listens on port 3909, published only on NetBird at `100.71.86.199:3909` and routed through `garage.vcov.org` with NetBird SSO.
 - [`postgres/compose.yaml`](postgres/compose.yaml): shared PostgreSQL 18.1. Infisical path: `/sure` for the existing PostgreSQL bootstrap credentials. The database is published only on NetBird at `100.71.86.199:5432`; Docker stacks use `postgres:5432` on `shared-services`.
 - [`pgadmin/compose.yaml`](pgadmin/compose.yaml): shared pgAdmin 4. Infisical path: `/pgadmin`; preloads the shared PostgreSQL server and is published only on NetBird at `100.71.86.199:3003`.
 - [`karakeep/compose.yaml`](karakeep/compose.yaml): Karakeep 0.32.0, Meilisearch, and Chrome. Infisical path: `/karakeep`; persistent data volumes are `karakeep-data` and `karakeep-meilisearch-data`. App endpoint: `http://100.71.86.199:3002`.
