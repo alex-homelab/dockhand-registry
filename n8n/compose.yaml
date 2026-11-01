@@ -23,11 +23,18 @@ services:
       N8N_LOG_LEVEL: warn
       N8N_RUNNERS_ENABLED: "true"
       N8N_RUNNERS_MODE: internal
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_PUBLIC_API_DISABLED: "false"
+      N8N_WORKFLOW_HISTORY_ENABLED: "true"
+      N8N_METRICS: "false"
+      N8N_DEFAULT_BINARY_DATA_MODE: default
       GENERIC_TIMEZONE: Europe/Tallinn
       TZ: Europe/Tallinn
 
 volumes:
   n8n-data:
+    name: n8n-data
 
 networks:
   shared-services:
