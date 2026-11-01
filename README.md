@@ -5,6 +5,7 @@ Docker Compose stacks deployed by Dockhand from this repository. Git is the desi
 ## Stacks
 
 - [`garage/compose.yaml`](garage/compose.yaml): single-node Garage S3 service and Garage Web UI 1.1.0. Infisical path: `/garage` (the UI reuses `GARAGE_ADMIN_TOKEN`). S3 endpoint on the shared Docker network: `http://garage:3900`; published only on NetBird at `100.71.86.199:3900`. The web UI listens on port 3909, published only on NetBird at `100.71.86.199:3909` and routed through `garage.vcov.org` with NetBird SSO.
+- [`n8n/compose.yaml`](n8n/compose.yaml): n8n 2.11.2, backed by the shared PostgreSQL service. Infisical path: `/n8n`; app endpoint on NetBird: `http://100.71.86.199:5678`.
 - [`postgres/compose.yaml`](postgres/compose.yaml): shared PostgreSQL 18.1. Infisical path: `/sure` for the existing PostgreSQL bootstrap credentials. The database is published only on NetBird at `100.71.86.199:5432`; Docker stacks use `postgres:5432` on `shared-services`.
 - [`pgadmin/compose.yaml`](pgadmin/compose.yaml): shared pgAdmin 4. Infisical path: `/pgadmin`; preloads the shared PostgreSQL server and is published only on NetBird at `100.71.86.199:3003`.
 - [`karakeep/compose.yaml`](karakeep/compose.yaml): Karakeep 0.32.0, Meilisearch, and Chrome. Infisical path: `/karakeep`; persistent data volumes are `karakeep-data` and `karakeep-meilisearch-data`. App endpoint: `http://100.71.86.199:3002`.
@@ -14,10 +15,10 @@ All application stacks that use shared services join the external Docker network
 
 ## Database notes
 
-Sure currently uses the same PostgreSQL bootstrap account it used in its former dedicated database container. Create distinct least-privilege roles and databases for future applications instead of sharing the Sure account. Karakeep's supported data store remains SQLite in `/data`; its S3 objects are stored in Garage.
+Sure currently uses the same PostgreSQL bootstrap account it used in its former dedicated database container. Create distinct least-privilege roles and databases for future applications instead of sharing the Sure account. Karakeep's supported data store remains SQLite in `/data`; its S3 objects are stored in Garage. n8n retains its dedicated `n8n` database role.
 
 pgAdmin uses the `postgres` Docker DNS name on `shared-services`. The PostgreSQL port is also published only on NetBird for external tools.
 
 ## Migration and rollback
 
-Keep the existing Kubernetes PVCs and Sure's old Docker volume until both cutovers are verified. Back up Karakeep's SQLite data and S3 assets before switching traffic. The Karakeep and Sure stacks must not be synced until their destination data and Infisical settings are ready.
+Keep the existing Kubernetes PVCs and Sure's old Docker volume until both cutovers are verified. Back up Karakeep's SQLite data and S3 assets before switching traffic. The Karakeep and Sure stacks must not be synced until their destination data and Infisical settings are ready. For n8n, retain the Kubernetes database and the local encrypted migration backup until the Docker instance and workflows are verified.
