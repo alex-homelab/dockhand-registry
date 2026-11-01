@@ -25,8 +25,8 @@ services:
       MEILI_ADDR: http://meilisearch:7700
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?required from Infisical /karakeep}
       BROWSER_WEB_URL: http://chrome:9222
-      ASSET_STORE_S3_ENDPOINT: ${ASSET_STORE_S3_ENDPOINT:?required from Infisical /karakeep}
-      ASSET_STORE_S3_BUCKET: ${ASSET_STORE_S3_BUCKET:?required from Infisical /karakeep}
+      ASSET_STORE_S3_ENDPOINT: http://garage:3900
+      ASSET_STORE_S3_BUCKET: karakeep
       ASSET_STORE_S3_ACCESS_KEY_ID: ${ASSET_STORE_S3_ACCESS_KEY_ID:?required from Infisical /karakeep}
       ASSET_STORE_S3_SECRET_ACCESS_KEY: ${ASSET_STORE_S3_SECRET_ACCESS_KEY:?required from Infisical /karakeep}
       ASSET_STORE_S3_REGION: home
