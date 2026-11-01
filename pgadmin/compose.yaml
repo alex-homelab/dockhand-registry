@@ -1,0 +1,25 @@
+services:
+  pgadmin:
+    image: dpage/pgadmin4:9.11
+    restart: unless-stopped
+    ports:
+      - "100.71.86.199:3003:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?required from Infisical /pgadmin}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?required from Infisical /pgadmin}
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - shared-services
+
+volumes:
+  pgadmin-data:
+    name: shared-pgadmin-data
+
+networks:
+  shared-services:
+    external: true
+    name: shared-services
