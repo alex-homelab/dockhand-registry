@@ -2,14 +2,23 @@
 
 Docker Compose stacks deployed by Dockhand from this repository.
 
-## Sure
+Docker Compose stacks deployed by Dockhand from this repository. Git is the desired-state source; stack secrets are supplied by the Infisical provider.
 
-The Sure stack lives in [`sure/compose.yaml`](sure/compose.yaml). The Dockhand Git stack uses the configured Infisical provider with secret path `/sure`.
+## Stacks
 
-The compose file reuses `PG_USER`, `PG_PASSWORD`, `SECRET_KEY_BASE`, and the three Active Record encryption keys from that path. It pins Sure to the live Kubernetes version (`0.7.4-alpha.7`) and PostgreSQL to `18.1`, matching the current cluster's database major and patch version.
+- [`garage/compose.yaml`](garage/compose.yaml): single-node Garage S3 service. Infisical path: `/garage`. S3 endpoint on the shared Docker network: `http://garage:3900`.
+- [`postgres/compose.yaml`](postgres/compose.yaml): shared PostgreSQL 18.1. Infisical path: `/sure` for the existing PostgreSQL bootstrap credentials. The database is published only on NetBird at `100.71.86.199:5432`; Docker stacks use `postgres:5432` on `shared-services`.
+- [`karakeep/compose.yaml`](karakeep/compose.yaml): Karakeep 0.32.0, Meilisearch, and Chrome. Infisical path: `/karakeep`; persistent data volumes are `karakeep-data` and `karakeep-meilisearch-data`. App endpoint: `http://100.71.86.199:3002`.
+- [`sure/compose.yaml`](sure/compose.yaml): Sure 0.7.4-alpha.7 and Redis. Infisical path: `/sure`; Sure connects to the shared `postgres` service. The previous `sure_postgres-data` volume and rollback-only Postgres service are retained.
 
-The web service binds only to the VPS NetBird address, `100.71.86.199:3001`. The Sidekiq worker is behind the Compose `worker` profile and stays off until the final data cutover.
+All application stacks that use shared services join the external Docker network `shared-services`, created by the PostgreSQL stack.
 
-### Data migration gate
+## Database notes
 
-The existing Kubernetes instance remains the source of truth until a final consistent database dump and `/rails/storage` archive have been restored and checked in Dockhand. Only then should traffic be switched and the `worker` profile enabled. Migration and cutover are not complete yet.
+Sure currently uses the same PostgreSQL bootstrap account it used in its former dedicated database container. Create distinct least-privilege roles and databases for future applications instead of sharing the Sure account. Karakeep's supported data store remains SQLite in `/data`; its S3 objects are stored in Garage.
+
+pgAdmin remains the existing single instance in Kubernetes and should be configured with a server entry for the shared PostgreSQL service at `100.71.86.199:5432`.
+
+## Migration and rollback
+
+Keep the existing Kubernetes PVCs and Sure's old Docker volume until both cutovers are verified. Back up Karakeep's SQLite data and S3 assets before switching traffic. The Karakeep and Sure stacks must not be synced until their destination data and Infisical settings are ready.

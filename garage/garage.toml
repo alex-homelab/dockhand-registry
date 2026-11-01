@@ -1,0 +1,17 @@
+replication_factor = 1
+consistency_mode = "consistent"
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+metadata_snapshots_dir = "/var/lib/garage/snapshots"
+metadata_auto_snapshot_interval = "6h"
+db_engine = "lmdb"
+
+rpc_bind_addr = "[::]:3901"
+
+[s3_api]
+api_bind_addr = "[::]:3900"
+s3_region = "home"
+
+[admin]
+api_bind_addr = "0.0.0.0:3903"

@@ -1,0 +1,80 @@
+services:
+  karakeep:
+    image: ghcr.io/karakeep-app/karakeep:0.32.0
+    restart: unless-stopped
+    ports:
+      - "100.71.86.199:3002:3000"
+    volumes:
+      - karakeep-data:/data
+    environment:
+      DATA_DIR: /data
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?required from Infisical /karakeep}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?required from Infisical /karakeep}
+      OAUTH_PROVIDER_NAME: Google
+      OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID:?required from Infisical /karakeep}
+      OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET:?required from Infisical /karakeep}
+      OAUTH_ALLOW_DANGEROUS_EMAIL_ACCOUNT_LINKING: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?required from Infisical /karakeep}
+      DISABLE_PASSWORD_AUTH: "false"
+      DISABLE_SIGNUPS: "false"
+      INFERENCE_LANG: russian
+      OCR_LANGS: eng,rus,est
+      CRAWLER_FULL_PAGE_ARCHIVE: "true"
+      CRAWLER_FULL_PAGE_SCREENSHOT: "true"
+      CRAWLER_STORE_PDF: "true"
+      MEILI_ADDR: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?required from Infisical /karakeep}
+      BROWSER_WEB_URL: http://chrome:9222
+      ASSET_STORE_S3_ENDPOINT: ${ASSET_STORE_S3_ENDPOINT:?required from Infisical /karakeep}
+      ASSET_STORE_S3_BUCKET: ${ASSET_STORE_S3_BUCKET:?required from Infisical /karakeep}
+      ASSET_STORE_S3_ACCESS_KEY_ID: ${ASSET_STORE_S3_ACCESS_KEY_ID:?required from Infisical /karakeep}
+      ASSET_STORE_S3_SECRET_ACCESS_KEY: ${ASSET_STORE_S3_SECRET_ACCESS_KEY:?required from Infisical /karakeep}
+      ASSET_STORE_S3_REGION: home
+      ASSET_STORE_S3_FORCE_PATH_STYLE: "true"
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+      chrome:
+        condition: service_started
+    networks:
+      - default
+      - shared-services
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.13.0
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?required from Infisical /karakeep}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch-data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  chrome:
+    image: docker.io/zenika/alpine-chrome:124
+    restart: unless-stopped
+    command:
+      - --remote-debugging-address=0.0.0.0
+      - --remote-debugging-port=9222
+      - --headless
+      - --hide-scrollbars
+      - --disable-gpu
+      - --disable-dev-shm-usage
+      - --no-sandbox
+    shm_size: 1gb
+
+volumes:
+  karakeep-data:
+    name: karakeep-data
+  meilisearch-data:
+    name: karakeep-meilisearch-data
+
+networks:
+  shared-services:
+    external: true
+    name: shared-services

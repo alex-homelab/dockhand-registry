@@ -1,0 +1,21 @@
+services:
+  garage:
+    image: dxflrs/garage:v2.5.0
+    restart: unless-stopped
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?required from Infisical /garage}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?required from Infisical /garage}
+    volumes:
+      - garage-data:/var/lib/garage
+      - ./garage.toml:/etc/garage.toml:ro
+    networks:
+      - shared-services
+
+volumes:
+  garage-data:
+    name: garage-data
+
+networks:
+  shared-services:
+    external: true
+    name: shared-services

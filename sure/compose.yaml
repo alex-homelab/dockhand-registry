@@ -6,6 +6,9 @@ services:
       - "100.71.86.199:3001:3000"
     volumes:
       - app-storage:/rails/storage
+    networks:
+      - default
+      - shared-services
     environment: &sure-env
       SELF_HOSTED: "true"
       ONBOARDING_STATE: "open"
@@ -21,12 +24,10 @@ services:
       POSTGRES_USER: ${PG_USER:?required from Infisical /sure}
       POSTGRES_PASSWORD: ${PG_PASSWORD:?required from Infisical /sure}
       POSTGRES_DB: sure
-      DB_HOST: db
+      DB_HOST: postgres
       DB_PORT: "5432"
       REDIS_URL: redis://redis:6379/1
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -36,15 +37,17 @@ services:
     restart: unless-stopped
     volumes:
       - app-storage:/rails/storage
+    networks:
+      - default
+      - shared-services
     environment: *sure-env
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
   db:
     image: postgres:18.1
+    profiles: [rollback]
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql
@@ -72,4 +75,10 @@ services:
 volumes:
   app-storage:
   postgres-data:
+    name: sure_postgres-data
   redis-data:
+
+networks:
+  shared-services:
+    external: true
+    name: shared-services
