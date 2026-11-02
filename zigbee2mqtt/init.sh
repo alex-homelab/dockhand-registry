@@ -8,3 +8,5 @@ if [ ! -f /app/data/.initialized ]; then
   fi
   touch /app/data/.initialized
 fi
+printf '%s' "$MQTT_SECRET_B64" | base64 -d > /app/data/secret.yaml
+chmod 600 /app/data/secret.yaml

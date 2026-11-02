@@ -1,9 +1,9 @@
 x-r2: &r2
-  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?required from Infisical}
-  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?required from Infisical}
-  AWS_ENDPOINT: ${AWS_ENDPOINT:?required from Infisical}
-  AWS_REGION: ${AWS_REGION:?required from Infisical}
-  BUCKET: ${BUCKET:?required from Infisical}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?required}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?required}
+  AWS_ENDPOINT: ${AWS_ENDPOINT:?required}
+  AWS_REGION: ${AWS_REGION:?required}
+  BUCKET: ${BUCKET:?required}
   AWS_EC2_METADATA_DISABLED: 'true'
 services:
   init:
@@ -12,7 +12,8 @@ services:
     restart: 'no'
     environment:
       <<: *r2
-      CONFIG_B64: ${CONFIG_B64:?required from Infisical /zigbee2mqtt}
+      CONFIG_B64: ${CONFIG_B64:?required}
+      MQTT_SECRET_B64: ${MQTT_SECRET_B64:?required}
     volumes:
       - data:/app/data
       - ./init.sh:/scripts/init.sh:ro
@@ -26,8 +27,8 @@ services:
     environment:
       TZ: Europe/Tallinn
       ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto:1883
-      ZIGBEE2MQTT_CONFIG_MQTT_USER: ${MQTT_USER:?required from Infisical}
-      ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_PASSWORD:?required from Infisical}
+      ZIGBEE2MQTT_CONFIG_MQTT_USER: ${MQTT_USER:?required}
+      ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_PASSWORD:?required}
     volumes: [data:/app/data]
     networks: [shared-services]
   backup:
