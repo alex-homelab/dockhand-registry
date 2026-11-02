@@ -1,37 +1,46 @@
-# Smarthome stacks — staged, not deployed
+# Smarthome stacks
 
-Based on the running Kubernetes smarthome namespace captured 2026-11-02. Images pinned to running digests. Dockhand stacks mosquitto, zigbee2mqtt and homeassistant use their respective compose.yaml paths, shared-services network, Infisical provider and /mosquitto, /zigbee2mqtt, /homeassistant secret paths. deployNow=false, autoUpdate=false until cutover.
+## Status (2026-11-02)
 
-## Secret provisioning required
+- Dockhand Git stack `mosquitto` (ID 7) is running on gw. MQTT: 100.71.86.199:1883; WebSockets: 100.71.86.199:9001.
+- Dockhand Git stack `zigbee2mqtt` (ID 8) is running on gw. UI: http://100.71.86.199:8080 and https://z2m.vcov.org. Existing NetBird authentication and access restrictions were preserved.
+- Both stacks deploy main from this repository and sync daily at 03:00. Their Compose context directories include init.sh and backup.sh.
+- Kubernetes Deployment/zigbee2mqtt in namespace smarthome is scaled to zero. The committed legacy-zigbee2mqtt-patch.yaml records this state; the original deployment had no Argo CD ownership labels.
+- Kubernetes Mosquitto remains running as a compatibility broker because Home Assistant still connects to 192.168.1.163:1883. The Docker broker has an authenticated bidirectional bridge to that endpoint. Do not stop the legacy broker until HA and any other clients are migrated.
+- Home Assistant stack (ID 9) is staged, not deployed; its Kubernetes instance remains online.
 
-- /mosquitto: CONFIG_B64 from ConfigMap mosquitto-config/mosquitto.conf; MOSQUITTO_PASSWORD_B64 from mosquitto-password/password.txt. Both base64 encoded. Never commit the password hashes.
-- /zigbee2mqtt: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT, AWS_REGION, BUCKET from Secret r2-credentials. CONFIG_B64 from zigbee2mqtt-config/configuration.yaml. MQTT_USER and MQTT_PASSWORD from mqtt-credentials/user,password. Compose overrides the MQTT server to mqtt://mosquitto:1883.
-- /homeassistant: the five R2 variables from Secret r2-credentials-ha.
+## Secrets
 
-The project and Dockhand provider use EU https://eu.infisical.com. Direct Python urllib API calls are blocked by Cloudflare HTTP 403 with body `error code: 1010`, including a status-endpoint request. This is a client-signature denial before token validation, not evidence of an invalid token. Resolve with the Infisical service owner; do not rotate credentials repeatedly or evade the block. Secret paths have not been populated by this change. No secret values are in this repository.
+For the two deployed stacks, secretProviderId is null and secrets are protected environment variables in Dockhand, copied directly from Kubernetes without displaying or committing values. This temporary fallback avoids the Infisical HTTP-client block. The Home Assistant stack still binds the Infisical provider and is not activated.
 
-## Restore and backup
+Mosquitto: CONFIG_B64 contains the original mosquitto-config/mosquitto.conf plus the temporary compatibility bridge settings. MOSQUITTO_PASSWORD_B64 contains the original mosquitto-password/password.txt. The config and password files are rendered only into the persistent config volume. Never commit either decoded file.
 
-One-shot init must complete successfully before each app starts. Persistent named volumes replace emptyDir. An initialization marker avoids restoring over existing initialized data. Failed restores block startup.
+Zigbee2MQTT: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT, AWS_REGION and BUCKET come from r2-credentials. CONFIG_B64 comes from zigbee2mqtt-config/configuration.yaml. MQTT_USER/MQTT_PASSWORD come from mqtt-credentials. MQTT_SECRET_B64 contains JSON-compatible YAML for secret.yaml, required by the restored configuration's secret references. MQTT server is mqtt://mosquitto:1883.
 
-Home Assistant restores the config/ subtree from backup.tgz. Its backup sidecar uploads backup.tgz every 300 seconds, excluding recorder SQLite, logs and nested backups, matching Kubernetes. This is a config-only backup, not recorder history. tar/gzip are installed at runtime as in the source deployment.
+Future Infisical paths: /mosquitto, /zigbee2mqtt and /homeassistant. The project/provider uses EU https://eu.infisical.com. Direct Python urllib requests receive Cloudflare 403 with `error code: 1010`, before token validation. Resolve with the service owner; do not repeatedly rotate tokens or evade the block. These new paths have not been provisioned by this change.
 
-Zigbee2MQTT restores database.db, state.json, coordinator_backup.json and configuration.yaml; ConfigMap fallback is used only if downloading configuration.yaml fails. This fixes the original shell operator-precedence bug that could overwrite a successful download. Backup uploads the four original object keys every 600 seconds. Credentials are provided as application env overrides.
+## Data and backups
 
-Mosquitto initializes config and password file with UID/GID 1883. Its source config disables MQTT persistence; that is preserved. Kubernetes had no Mosquitto R2 backup container, so none is added here.
+Images are pinned to the original Kubernetes image digests. Named Docker volumes replace emptyDir. One-shot init must succeed before the app starts; `.initialized` prevents re-restoring over initialized data.
 
-Backups mount data read-only. Upload failures exit and restart the sidecar. They use the ORIGINAL R2 bucket/key locations: never run old and new backup writers concurrently.
+Zigbee2MQTT restores database.db, state.json, coordinator_backup.json and configuration.yaml from the original R2 bucket. ConfigMap fallback applies only when configuration.yaml download fails; successful downloads are not overwritten. secret.yaml is rendered from protected Dockhand data on init. The backup sidecar uploads the four original object keys every 600 seconds, mounting data read-only. Errors exit and Docker restarts the sidecar. At cutover the old node process was paused, final files uploaded to R2 and a validated private tar archive saved on gw, then the old pod was deleted before starting Docker Zigbee2MQTT. R2 restore completed successfully. A manual upload through the running Docker backup container and HEAD verification of all four objects succeeded.
 
-## Coordinator routing verified 2026-11-02
+Mosquitto had no R2 backup in Kubernetes. Config/password come from protected Dockhand variables. The original persistence=false setting is preserved. An additional volume exists at /mosquitto/data if persistence is enabled later.
 
-Home network cvdfldrl0ubs739pgnq0 now contains Zigbee coordinator resource dbk9is2fadhs738a46cg at 192.168.1.1/32. Policy dbk9isafadhs738a46f0 allows only source group Contabo (gw) to this resource on TCP 20108. Host routing through wt0 and TCP access from the shared-services Docker network were verified. No Zigbee application protocol commands were sent.
+Home Assistant (not activated) restores config/ from backup.tgz and uploads every 300 seconds, excluding recorder SQLite, logs and nested backups as in Kubernetes. This is config-only backup, not recorder history. tar/gzip install follows the original AWS CLI containers.
 
-Home currently routes through MacBook-Pro-Aleksandr.local (100.71.244.61); the other Home router NAS is offline. Coordinator access will depend on the MacBook staying online until an always-on Home routing peer is available.
+## Network and compatibility
 
-## Activation gates
+Shared Docker network: shared-services. All published ports bind only 100.71.86.199.
 
-1. Resolve EU Infisical client access, provision secrets and verify required R2 objects privately.
-2. Keep a Home routing peer online. Never run two Zigbee2MQTT instances against one coordinator.
-3. Choose Home Assistant placement: Kubernetes used home-node hostNetwork. VPS Compose binds only NetBird through bridge networking; LAN multicast discovery, Bluetooth, local device access and Matter connectivity do not transfer automatically. Use a home Docker environment and adapt networking if discovery is required.
-4. At cutover, stop old apps and backup writers, capture final backups, deploy Mosquitto before Zigbee2MQTT and Home Assistant. Update restored HA MQTT/Matter endpoints via supported settings. Verify devices/automations before switching reverse proxies.
-5. Enable scheduled Git sync only after verified deployment. Retain Kubernetes data and backups for rollback.
+NetBird Home resources/policies:
+- Coordinator: 192.168.1.1/32, resource dbk9is2fadhs738a46cg, policy dbk9isafadhs738a46f0 permits only gw/Contabo TCP 20108.
+- Temporary MQTT bridge: 192.168.1.163/32, policy Contabo MQTT bridge permits only gw/Contabo TCP 1883.
+
+Both endpoints were verified from gw; coordinator TCP was also verified from Docker. Home currently routes through MacBook-Pro-Aleksandr.local (100.71.244.61), while NAS is offline. Keep a routing peer online or provide an always-on replacement.
+
+Verified: Zigbee2MQTT startup/coordinator connection, frontend HTTP 200, authenticated read-only MQTT subscriptions report bridge/state online on both new and old brokers, R2 uploads and object metadata. No physical-device commands were issued as a test.
+
+## Remaining Home Assistant cutover
+
+Kubernetes HA uses home-node hostNetwork. The staged VPS Compose binds NetBird through bridge networking; LAN multicast discovery, Bluetooth, local devices and Matter connectivity do not transfer automatically. Decide network placement and update HA MQTT/Matter endpoints through supported settings before activation. Stop its old R2 writer before enabling the Docker writer; original bucket/key locations are shared. Keep Kubernetes data and private backups for rollback.
