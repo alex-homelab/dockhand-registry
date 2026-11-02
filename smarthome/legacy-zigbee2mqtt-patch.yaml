@@ -1,0 +1,5 @@
+# Apply to Deployment/zigbee2mqtt in namespace smarthome at Docker cutover.
+# This legacy workload has no Argo CD ownership labels.
+# Keep the legacy Mosquitto running as a compatibility endpoint for Home Assistant.
+spec:
+  replicas: 0
