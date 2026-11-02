@@ -1,20 +1,20 @@
+x-r2: &r2
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?required}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?required}
+  AWS_ENDPOINT: ${AWS_ENDPOINT:?required}
+  AWS_REGION: ${AWS_REGION:?required}
+  BUCKET: ${BUCKET:?required}
+  AWS_EC2_METADATA_DISABLED: 'true'
 services:
   init:
     image: amazon/aws-cli@sha256:d557b3524475d70dd3104cf44d96568ee3188897b73a6ece2b37aa50e1af362f
     entrypoint: [/bin/sh, /scripts/init.sh]
     restart: 'no'
-    environment:
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?required}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?required}
-      AWS_ENDPOINT: ${AWS_ENDPOINT:?required}
-      AWS_REGION: ${AWS_REGION:?required}
-      BUCKET: ${BUCKET:?required}
-      AWS_EC2_METADATA_DISABLED: 'true'
+    environment: *r2
     volumes:
       - data:/config
       - ./init.sh:/scripts/init.sh:ro
   homeassistant:
-    # Latest stable release verified 2026-11-02; keep the trial reproducible.
     image: ghcr.io/home-assistant/home-assistant:2026.10.4
     restart: unless-stopped
     stop_grace_period: 60s
@@ -28,7 +28,19 @@ services:
       - 'matter-server:10.43.17.129'
     volumes: [data:/config]
     networks: [shared-services]
-# Deliberately no backup service while testing the restored configuration.
+  backup:
+    image: amazon/aws-cli@sha256:d557b3524475d70dd3104cf44d96568ee3188897b73a6ece2b37aa50e1af362f
+    entrypoint: [/bin/sh, /scripts/backup.sh]
+    restart: unless-stopped
+    depends_on:
+      homeassistant:
+        condition: service_started
+    environment:
+      <<: *r2
+      BACKUP_INTERVAL_SECONDS: '300'
+    volumes:
+      - data:/config:ro
+      - ./backup.sh:/scripts/backup.sh:ro
 volumes:
   data:
     name: smarthome-homeassistant-data
