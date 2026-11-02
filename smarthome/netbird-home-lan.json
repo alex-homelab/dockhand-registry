@@ -1,0 +1,35 @@
+{
+  "networkId": "cvdfldrl0ubs739pgnq0",
+  "networkName": "Home",
+  "resourceId": "dbkab82fadhs738cvdh0",
+  "resource": {
+    "name": "Home LAN",
+    "description": "Home subnet accessible from gw for Docker home automation services",
+    "address": "192.168.1.0/24",
+    "enabled": true,
+    "groups": []
+  },
+  "policyId": "dbkab8afadhs738cvdng",
+  "policy": {
+    "name": "Contabo to Home LAN",
+    "description": "Allow only gw/Contabo to the requested Home LAN subnet",
+    "enabled": true,
+    "rules": [{
+      "name": "gw to Home LAN",
+      "enabled": true,
+      "action": "accept",
+      "bidirectional": false,
+      "protocol": "all",
+      "sources": ["daunkbifadhs73be88m0"],
+      "destinationResource": {"id": "dbkab82fadhs738cvdh0", "type": "subnet"}
+    }]
+  },
+  "verification": {
+    "date": "2026-11-02",
+    "route": "192.168.1.0/24 via NetBird wt0",
+    "sourceGroup": "Contabo contains only gw",
+    "activeRoutingPeer": "MacBook-Pro-Aleksandr.local",
+    "hostAndDockerTest": "192.168.1.201:8006 reachable from gw and Home Assistant container",
+    "moonraker": "192.168.1.134:7125 refused TCP connection after routing was installed; service/listener or endpoint firewall needs separate checking"
+  }
+}
