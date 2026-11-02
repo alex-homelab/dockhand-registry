@@ -1,0 +1,46 @@
+x-r2: &r2
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?required from Infisical}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?required from Infisical}
+  AWS_ENDPOINT: ${AWS_ENDPOINT:?required from Infisical}
+  AWS_REGION: ${AWS_REGION:?required from Infisical}
+  BUCKET: ${BUCKET:?required from Infisical}
+  AWS_EC2_METADATA_DISABLED: 'true'
+services:
+  init:
+    image: amazon/aws-cli@sha256:d557b3524475d70dd3104cf44d96568ee3188897b73a6ece2b37aa50e1af362f
+    entrypoint: [/bin/sh, /scripts/init.sh]
+    restart: 'no'
+    environment: *r2
+    volumes:
+      - data:/config
+      - ./init.sh:/scripts/init.sh:ro
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant@sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133
+    restart: unless-stopped
+    stop_grace_period: 60s
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    ports: ['100.71.86.199:8123:8123']
+    environment:
+      TZ: Europe/Tallinn
+    volumes: [data:/config]
+    networks: [shared-services]
+  backup:
+    image: amazon/aws-cli@sha256:d557b3524475d70dd3104cf44d96568ee3188897b73a6ece2b37aa50e1af362f
+    entrypoint: [/bin/sh, /scripts/backup.sh]
+    restart: unless-stopped
+    environment: *r2
+    depends_on:
+      homeassistant:
+        condition: service_started
+    volumes:
+      - data:/config:ro
+      - ./backup.sh:/scripts/backup.sh:ro
+volumes:
+  data:
+    name: smarthome-homeassistant-data
+networks:
+  shared-services:
+    external: true
+    name: shared-services

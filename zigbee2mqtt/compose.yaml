@@ -1,0 +1,50 @@
+x-r2: &r2
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?required from Infisical}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?required from Infisical}
+  AWS_ENDPOINT: ${AWS_ENDPOINT:?required from Infisical}
+  AWS_REGION: ${AWS_REGION:?required from Infisical}
+  BUCKET: ${BUCKET:?required from Infisical}
+  AWS_EC2_METADATA_DISABLED: 'true'
+services:
+  init:
+    image: amazon/aws-cli@sha256:d557b3524475d70dd3104cf44d96568ee3188897b73a6ece2b37aa50e1af362f
+    entrypoint: [/bin/sh, /scripts/init.sh]
+    restart: 'no'
+    environment:
+      <<: *r2
+      CONFIG_B64: ${CONFIG_B64:?required from Infisical /zigbee2mqtt}
+    volumes:
+      - data:/app/data
+      - ./init.sh:/scripts/init.sh:ro
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt@sha256:fb4a6b0f6868ad1cd6a9996479802b2420e599c3463b62bbff8c8cd9a908f43a
+    restart: unless-stopped
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    ports: ['100.71.86.199:8080:8080']
+    environment:
+      TZ: Europe/Tallinn
+      ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto:1883
+      ZIGBEE2MQTT_CONFIG_MQTT_USER: ${MQTT_USER:?required from Infisical}
+      ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_PASSWORD:?required from Infisical}
+    volumes: [data:/app/data]
+    networks: [shared-services]
+  backup:
+    image: amazon/aws-cli@sha256:d557b3524475d70dd3104cf44d96568ee3188897b73a6ece2b37aa50e1af362f
+    entrypoint: [/bin/sh, /scripts/backup.sh]
+    restart: unless-stopped
+    environment: *r2
+    depends_on:
+      zigbee2mqtt:
+        condition: service_started
+    volumes:
+      - data:/app/data:ro
+      - ./backup.sh:/scripts/backup.sh:ro
+volumes:
+  data:
+    name: smarthome-zigbee2mqtt-data
+networks:
+  shared-services:
+    external: true
+    name: shared-services
