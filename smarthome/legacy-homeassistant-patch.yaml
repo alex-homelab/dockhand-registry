@@ -1,0 +1,5 @@
+# Temporary shutdown while trialling the Docker Home Assistant.
+# Apply as a merge patch to Deployment/homeassistant in namespace smarthome.
+# Keep the original Deployment and backups for rollback.
+spec:
+  replicas: 0
